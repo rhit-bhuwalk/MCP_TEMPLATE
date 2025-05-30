@@ -111,15 +111,50 @@ export const formatResourceContent = (uri: string, data: unknown) => {
  * Simple logging utility
  */
 export const logger = {
+  // Generate unique numeric IDs for log messages
+  _nextId: 1,
+  
+  // Helper to get next ID
+  _getId: function() {
+    return this._nextId++;
+  },
+  
   info: (message: string, ...args: unknown[]) => 
-    console.log(`[INFO] ${message}`, ...args),
+    console.log(JSON.stringify({
+      jsonrpc: "2.0",
+      method: "log.info",
+      id: Date.now(),
+      params: {
+        message,
+        timestamp: new Date().toISOString(),
+        data: args.length ? args : undefined
+      }
+    })),
   
   error: (message: string, ...args: unknown[]) => 
-    console.error(`[ERROR] ${message}`, ...args),
+    console.error(JSON.stringify({
+      jsonrpc: "2.0",
+      method: "log.error",
+      id: Date.now(),
+      params: {
+        message,
+        timestamp: new Date().toISOString(),
+        data: args.length ? args : undefined
+      }
+    })),
   
   debug: (message: string, ...args: unknown[]) => {
     if (process.env.DEBUG) {
-      console.log(`[DEBUG] ${message}`, ...args);
+      console.log(JSON.stringify({
+        jsonrpc: "2.0",
+        method: "log.debug",
+        id: Date.now(),
+        params: {
+          message,
+          timestamp: new Date().toISOString(),
+          data: args.length ? args : undefined
+        }
+      }));
     }
   }
 };
