@@ -1,261 +1,119 @@
-# MCP_TEMPLATE
+# MCP Template - Build Your Own AI Server
 
-A flexible and extensible template for building Model Context Protocol (MCP) servers in TypeScript. This template provides the foundation for creating custom MCP implementations that allow AI systems to interact with your data and services.
+> **Simple explanation**: This template helps you create a server that AI assistants can talk to and get data from. Think of it like building a bridge between AI and your data!
 
-## What is MCP?
+## What is this?
 
-The Model Context Protocol (MCP) is a standardized way for AI systems to interact with external data sources and tools. It defines a set of operations that AI systems can use to:
+Imagine you have some data (like a list of users, products, or files) and you want an AI assistant to be able to:
+- See what data you have
+- Ask questions about your data  
+- Create, update, or delete information
 
-- Discover available resources and tools
-- Read structured data from resources
-- Execute tools to perform actions or retrieve information
+This template makes that super easy! It's like giving your AI a special phone number to call your data.
 
-This template helps you implement your own MCP server to expose your data and functionality to AI systems in a standardized way.
+## What You'll Need
 
-## Features
+- Basic knowledge of JavaScript/TypeScript
+- Node.js installed on your computer
+- Your favorite code editor
 
-- 🛠️ **Ready-to-use Core Components**: Base MCPServer implementation, generic data service interface, and utility functions
-- 🔍 **Type Safety**: Full TypeScript support with comprehensive type definitions
-- 🧩 **Extensible Architecture**: Easy to customize and extend for your specific use case
-- 🔌 **Transport Support**: Works with HTTP, WebSocket, and stdio transports from the MCP SDK
-- 📝 **Schema Validation**: Built-in schema validation with Zod
-- 🧪 **Example Implementation**: Includes a fully working example server with in-memory data service
+## Quick Start (5 minutes!)
 
-## Installation
-
+### 1. Get the code
 ```bash
-# Clone the template repository
+# Download this template
 git clone https://github.com/rhit-bhuwalk/MCP_TEMPLATE.git
 cd MCP_TEMPLATE
 
-# Install dependencies
+# Install everything you need
 npm install
+```
 
-# Build the project
-npm run build
-
-# Run the example server
+### 2. See it work
+```bash
+# Build and run the example
 npm start
 ```
 
-## Quick Start
+Congrats! You now have a working AI server with sample user data.
 
-1. **Create a Data Service**
+### 3. Try it out
+The server comes with sample data about users. An AI can now:
+- See the list of users
+- Find specific users
+- Add new users
+- Update user information
+- Search through users
 
+## How It Works (The Simple Version)
+
+Think of this template like a restaurant:
+
+1. **Your Data** = The kitchen (where the food/data is stored)
+2. **Resources** = The menu (what data is available)
+3. **Tools** = The waiters (what actions the AI can do)
+4. **AI Assistant** = The customer (who orders/requests data)
+
+### The Basic Flow:
+1. AI asks: "What data do you have?" 
+2. Your server responds: "I have users, products, etc."
+3. AI asks: "Show me all users"
+4. Your server responds: "Here are the users..."
+
+## Making It Your Own
+
+### Step 1: Replace the Example Data
+
+The template comes with user data. Let's say you want to store books instead:
+
+1. **Create your data structure** (what a book looks like):
 ```typescript
-// src/services/MyDataService.ts
-import { IDataService, Resource } from 'MCP_TEMPLATE';
-
-export class MyDataService implements IDataService {
-  // Implement the required methods
-  async listResources(): Promise<Resource[]> {
-    // Your implementation
-  }
-  
-  async getResource(uri: string): Promise<Resource> {
-    // Your implementation
-  }
-  
-  // ... other methods
+// A book has these properties
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  year: number;
+  pages: number;
 }
 ```
 
-2. **Define Resources**
-
+2. **Tell the server about books**:
 ```typescript
-// src/resources/ProductResource.ts
-import { z } from 'zod';
-import { Resource } from 'MCP_TEMPLATE';
-
-export const ProductSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  price: z.number(),
-  description: z.string().optional(),
-});
-
-export type Product = z.infer<typeof ProductSchema>;
-
-export const PRODUCT_RESOURCE: Resource = {
-  uri: 'mcp://products',
-  name: 'Products',
-  description: 'Product catalog',
-};
+// Register books as a resource
+dataService.registerResource('Books', 'A collection of books');
 ```
 
-3. **Create the Server**
-
+3. **Add some sample books**:
 ```typescript
-// src/server.ts
-import { HttpTransport } from '@modelcontextprotocol/sdk/transports/http.js';
-import { MCPServer } from 'MCP_TEMPLATE';
-import { MyDataService } from './services/MyDataService';
-import { PRODUCT_RESOURCE } from './resources/ProductResource';
-
-async function main() {
-  // Initialize the data service
-  const dataService = new MyDataService();
-  
-  // Register resources
-  dataService.registerResource(
-    PRODUCT_RESOURCE.name, 
-    PRODUCT_RESOURCE.description
-  );
-  
-  // Create the MCP server
-  const server = new MCPServer(dataService, {
-    name: 'my-mcp-server',
-    version: '1.0.0',
-  });
-  
-  // Connect to a transport
-  const transport = new HttpTransport({ port: 3000 });
-  await server.connect(transport);
-  
-  console.log('Server running on port 3000');
-}
-
-main().catch(console.error);
+const sampleBooks = [
+  { id: '1', title: 'Harry Potter', author: 'J.K. Rowling', year: 1997, pages: 309 },
+  { id: '2', title: 'The Hobbit', author: 'J.R.R. Tolkien', year: 1937, pages: 310 }
+];
+dataService.seedData('mcp://books', sampleBooks);
 ```
 
-4. **Run your server**
+### Step 2: Add Custom Actions
 
-```bash
-npm run build
-node dist/server.js
-```
-
-## Architecture Overview
-
-The template is organized into the following components:
-
-### Core
-
-- **MCPServer**: The main server class that implements the MCP protocol and handles requests.
-
-### Types
-
-- **IDataService**: Interface for data access operations.
-- **Resource**: Interface for resources exposed through the MCP.
-- **Record**: Generic type for data records.
-- **Schema Definitions**: Zod schemas for validating inputs and outputs.
-
-### Utils
-
-- **formatToolResponse**: Utility for formatting tool responses.
-- **getInputSchema**: Converts Zod schemas to JSON schemas for MCP.
-- **safeExecute**: Safely executes tool handlers with error handling.
-- **validateInput**: Validates and parses input data against schemas.
-- **logger**: Simple logging utility.
-
-### Examples
-
-- **InMemoryDataService**: Example implementation of IDataService.
-- **UserResource**: Example resource definition with schema and sample data.
-
-## Extending the Template
-
-### Creating Custom Tools
+Want the AI to do something special? Add a custom tool:
 
 ```typescript
+// Let AI find books by author
 server.registerTool(
-  'calculate_discount',
-  'Calculate discount for a product',
+  'find_books_by_author',
+  'Find all books by a specific author',
   z.object({
-    productId: z.string(),
-    discountPercent: z.number().min(0).max(100),
+    authorName: z.string()
   }),
   async (args) => {
-    const { productId, discountPercent } = args;
-    const product = await dataService.getRecord('mcp://products', productId);
-    const discountedPrice = product.price * (1 - discountPercent / 100);
-    return { 
-      originalPrice: product.price,
-      discountPercent,
-      discountedPrice
-    };
+    const books = await dataService.queryResource('mcp://books', {
+      filter: { author: args.authorName }
+    });
+    return { books, count: books.length };
   }
 );
 ```
 
-### Implementing Custom Data Sources
+Now an AI can ask: "Find all books by J.K. Rowling"
 
-You can connect to any data source by implementing the `IDataService` interface:
-
-- **Database Integration**: Connect to SQL, NoSQL, or Graph databases
-- **API Integration**: Wrap existing APIs as MCP resources
-- **File System**: Access files and directories as resources
-- **Custom Systems**: Integrate with any custom data system
-
-Example with MongoDB:
-
-```typescript
-import { MongoClient } from 'mongodb';
-import { IDataService, Resource } from 'MCP_TEMPLATE';
-
-export class MongoDataService implements IDataService {
-  private client: MongoClient;
-  private resources: Map<string, Resource> = new Map();
-  
-  constructor(connectionString: string) {
-    this.client = new MongoClient(connectionString);
-  }
-  
-  async connect() {
-    await this.client.connect();
-  }
-  
-  // Implement IDataService methods
-  // ...
-}
-```
-
-## API Documentation
-
-### MCPServer
-
-```typescript
-class MCPServer implements IMCPServer {
-  constructor(
-    dataService: IDataService, 
-    options: {
-      name: string;
-      version: string;
-      resourcePrefix?: string;
-    }
-  );
-  
-  registerTool(
-    toolName: string,
-    description: string,
-    inputSchema: z.ZodType<object>,
-    handler: (args: unknown) => Promise<unknown>
-  ): void;
-  
-  connect(transport: Transport): Promise<void>;
-  close(): Promise<void>;
-}
-```
-
-### IDataService
-
-```typescript
-interface IDataService {
-  listResources(): Promise<Resource[]>;
-  getResource(uri: string): Promise<Resource>;
-  queryResource(uri: string, query: Record<string, unknown>): Promise<unknown[]>;
-  createRecord(uri: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
-  updateRecord(uri: string, id: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
-  deleteRecord(uri: string, id: string): Promise<boolean>;
-}
-```
-
-For more detailed documentation, refer to:
-
-- [Model Context Protocol Specification](https://github.com/modelcontextprotocol/specification)
-- [MCP SDK Documentation](https://github.com/modelcontextprotocol/sdk)
-- [Zod Documentation](https://github.com/colinhacks/zod)
-
-## License
-
-MIT License
+## File Structure (Don't Worry, It's Simple!)
