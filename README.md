@@ -1,170 +1,261 @@
-# airtable-mcp-server
+# MCP_TEMPLATE
 
-[![smithery badge](https://smithery.ai/badge/airtable-mcp-server)](https://smithery.ai/server/airtable-mcp-server)
+A flexible and extensible template for building Model Context Protocol (MCP) servers in TypeScript. This template provides the foundation for creating custom MCP implementations that allow AI systems to interact with your data and services.
 
-A Model Context Protocol server that provides read and write access to Airtable databases. This server enables LLMs to inspect database schemas, then read and write records.
+## What is MCP?
 
-https://github.com/user-attachments/assets/c8285e76-d0ed-4018-94c7-20535db6c944
+The Model Context Protocol (MCP) is a standardized way for AI systems to interact with external data sources and tools. It defines a set of operations that AI systems can use to:
 
-## Usage
+- Discover available resources and tools
+- Read structured data from resources
+- Execute tools to perform actions or retrieve information
 
-To use this server with the Claude Desktop app, add the following configuration to the "mcpServers" section of your `claude_desktop_config.json`:
+This template helps you implement your own MCP server to expose your data and functionality to AI systems in a standardized way.
 
-```json
-{
-  "mcpServers": {
-    "airtable": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "airtable-mcp-server"
-      ],
-      "env": {
-        "AIRTABLE_API_KEY": "pat123.abc123"
-      }
-    }
+## Features
+
+- 🛠️ **Ready-to-use Core Components**: Base MCPServer implementation, generic data service interface, and utility functions
+- 🔍 **Type Safety**: Full TypeScript support with comprehensive type definitions
+- 🧩 **Extensible Architecture**: Easy to customize and extend for your specific use case
+- 🔌 **Transport Support**: Works with HTTP, WebSocket, and stdio transports from the MCP SDK
+- 📝 **Schema Validation**: Built-in schema validation with Zod
+- 🧪 **Example Implementation**: Includes a fully working example server with in-memory data service
+
+## Installation
+
+```bash
+# Clone the template repository
+git clone https://github.com/rhit-bhuwalk/MCP_TEMPLATE.git
+cd MCP_TEMPLATE
+
+# Install dependencies
+npm install
+
+# Build the project
+npm run build
+
+# Run the example server
+npm start
+```
+
+## Quick Start
+
+1. **Create a Data Service**
+
+```typescript
+// src/services/MyDataService.ts
+import { IDataService, Resource } from 'MCP_TEMPLATE';
+
+export class MyDataService implements IDataService {
+  // Implement the required methods
+  async listResources(): Promise<Resource[]> {
+    // Your implementation
   }
+  
+  async getResource(uri: string): Promise<Resource> {
+    // Your implementation
+  }
+  
+  // ... other methods
 }
 ```
 
-Replace `pat123.abc123` with your [Airtable personal access token](https://airtable.com/create/tokens). Your token should have at least `schema.bases:read` and `data.records:read`, and optionally the corresponding write permissions.
+2. **Define Resources**
 
-## Components
+```typescript
+// src/resources/ProductResource.ts
+import { z } from 'zod';
+import { Resource } from 'MCP_TEMPLATE';
 
-### Tools
+export const ProductSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  price: z.number(),
+  description: z.string().optional(),
+});
 
-- **list_records**
-  - Lists records from a specified Airtable table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table to query
-    - `maxRecords` (number, optional): Maximum number of records to return. Defaults to 100.
-    - `filterByFormula` (string, optional): Airtable formula to filter records
+export type Product = z.infer<typeof ProductSchema>;
 
-- **search_records**
-  - Search for records containing specific text
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table to query
-    - `searchTerm` (string, required): Text to search for in records
-    - `fieldIds` (array, optional): Specific field IDs to search in. If not provided, searches all text-based fields.
-    - `maxRecords` (number, optional): Maximum number of records to return. Defaults to 100.
+export const PRODUCT_RESOURCE: Resource = {
+  uri: 'mcp://products',
+  name: 'Products',
+  description: 'Product catalog',
+};
+```
 
-- **list_bases**
-  - Lists all accessible Airtable bases
-  - No input parameters required
-  - Returns base ID, name, and permission level
+3. **Create the Server**
 
-- **list_tables**
-  - Lists all tables in a specific base
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `detailLevel` (string, optional): The amount of detail to get about the tables (`tableIdentifiersOnly`, `identifiersOnly`, or `full`)
-  - Returns table ID, name, description, fields, and views (to the given `detailLevel`)
+```typescript
+// src/server.ts
+import { HttpTransport } from '@modelcontextprotocol/sdk/transports/http.js';
+import { MCPServer } from 'MCP_TEMPLATE';
+import { MyDataService } from './services/MyDataService';
+import { PRODUCT_RESOURCE } from './resources/ProductResource';
 
-- **describe_table**
-  - Gets detailed information about a specific table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table to describe
-    - `detailLevel` (string, optional): The amount of detail to get about the table (`tableIdentifiersOnly`, `identifiersOnly`, or `full`)
-  - Returns the same format as list_tables but for a single table
-  - Useful for getting details about a specific table without fetching information about all tables in the base
+async function main() {
+  // Initialize the data service
+  const dataService = new MyDataService();
+  
+  // Register resources
+  dataService.registerResource(
+    PRODUCT_RESOURCE.name, 
+    PRODUCT_RESOURCE.description
+  );
+  
+  // Create the MCP server
+  const server = new MCPServer(dataService, {
+    name: 'my-mcp-server',
+    version: '1.0.0',
+  });
+  
+  // Connect to a transport
+  const transport = new HttpTransport({ port: 3000 });
+  await server.connect(transport);
+  
+  console.log('Server running on port 3000');
+}
 
-- **get_record**
-  - Gets a specific record by ID
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `recordId` (string, required): The ID of the record to retrieve
+main().catch(console.error);
+```
 
-- **create_record**
-  - Creates a new record in a table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `fields` (object, required): The fields and values for the new record
+4. **Run your server**
 
-- **update_records**
-  - Updates one or more records in a table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `records` (array, required): Array of objects containing record ID and fields to update
+```bash
+npm run build
+node dist/server.js
+```
 
-- **delete_records**
-  - Deletes one or more records from a table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `recordIds` (array, required): Array of record IDs to delete
+## Architecture Overview
 
-- **create_table**
-  - Creates a new table in a base
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `name` (string, required): Name of the new table
-    - `description` (string, optional): Description of the table
-    - `fields` (array, required): Array of field definitions (name, type, description, options)
+The template is organized into the following components:
 
-- **update_table**
-  - Updates a table's name or description
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `name` (string, optional): New name for the table
-    - `description` (string, optional): New description for the table
+### Core
 
-- **create_field**
-  - Creates a new field in a table
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `name` (string, required): Name of the new field
-    - `type` (string, required): Type of the field
-    - `description` (string, optional): Description of the field
-    - `options` (object, optional): Field-specific options
+- **MCPServer**: The main server class that implements the MCP protocol and handles requests.
 
-- **update_field**
-  - Updates a field's name or description
-  - Input parameters:
-    - `baseId` (string, required): The ID of the Airtable base
-    - `tableId` (string, required): The ID of the table
-    - `fieldId` (string, required): The ID of the field
-    - `name` (string, optional): New name for the field
-    - `description` (string, optional): New description for the field
+### Types
 
-### Resources
+- **IDataService**: Interface for data access operations.
+- **Resource**: Interface for resources exposed through the MCP.
+- **Record**: Generic type for data records.
+- **Schema Definitions**: Zod schemas for validating inputs and outputs.
 
-The server provides schema information for Airtable bases and tables:
+### Utils
 
-- **Table Schemas** (`airtable://<baseId>/<tableId>/schema`)
-  - JSON schema information for each table
-  - Includes:
-    - Base id and table id
-    - Table name and description
-    - Primary field ID
-    - Field definitions (ID, name, type, description, options)
-    - View definitions (ID, name, type)
-  - Automatically discovered from Airtable's metadata API
+- **formatToolResponse**: Utility for formatting tool responses.
+- **getInputSchema**: Converts Zod schemas to JSON schemas for MCP.
+- **safeExecute**: Safely executes tool handlers with error handling.
+- **validateInput**: Validates and parses input data against schemas.
+- **logger**: Simple logging utility.
 
-## Contributing
+### Examples
 
-Pull requests are welcomed on GitHub! To get started:
+- **InMemoryDataService**: Example implementation of IDataService.
+- **UserResource**: Example resource definition with schema and sample data.
 
-1. Install Git and Node.js
-2. Clone the repository
-3. Install dependencies with `npm install`
-4. Run `npm run test` to run tests
-5. Build with `npm run build`
-  - You can use `npm run build:watch` to automatically build after editing [`src/index.ts`](./src/index.ts). This means you can hit save, reload Claude Desktop (with Ctrl/Cmd+R), and the changes apply.
+## Extending the Template
 
-## Releases
+### Creating Custom Tools
 
-Versions follow the [semantic versioning spec](https://semver.org/).
+```typescript
+server.registerTool(
+  'calculate_discount',
+  'Calculate discount for a product',
+  z.object({
+    productId: z.string(),
+    discountPercent: z.number().min(0).max(100),
+  }),
+  async (args) => {
+    const { productId, discountPercent } = args;
+    const product = await dataService.getRecord('mcp://products', productId);
+    const discountedPrice = product.price * (1 - discountPercent / 100);
+    return { 
+      originalPrice: product.price,
+      discountPercent,
+      discountedPrice
+    };
+  }
+);
+```
 
-To release:
+### Implementing Custom Data Sources
 
-1. Use `npm version <major | minor | patch>` to bump the version
-2. Run `git push --follow-tags` to push with tags
-3. Wait for GitHub Actions to publish to the NPM registry.
+You can connect to any data source by implementing the `IDataService` interface:
+
+- **Database Integration**: Connect to SQL, NoSQL, or Graph databases
+- **API Integration**: Wrap existing APIs as MCP resources
+- **File System**: Access files and directories as resources
+- **Custom Systems**: Integrate with any custom data system
+
+Example with MongoDB:
+
+```typescript
+import { MongoClient } from 'mongodb';
+import { IDataService, Resource } from 'MCP_TEMPLATE';
+
+export class MongoDataService implements IDataService {
+  private client: MongoClient;
+  private resources: Map<string, Resource> = new Map();
+  
+  constructor(connectionString: string) {
+    this.client = new MongoClient(connectionString);
+  }
+  
+  async connect() {
+    await this.client.connect();
+  }
+  
+  // Implement IDataService methods
+  // ...
+}
+```
+
+## API Documentation
+
+### MCPServer
+
+```typescript
+class MCPServer implements IMCPServer {
+  constructor(
+    dataService: IDataService, 
+    options: {
+      name: string;
+      version: string;
+      resourcePrefix?: string;
+    }
+  );
+  
+  registerTool(
+    toolName: string,
+    description: string,
+    inputSchema: z.ZodType<object>,
+    handler: (args: unknown) => Promise<unknown>
+  ): void;
+  
+  connect(transport: Transport): Promise<void>;
+  close(): Promise<void>;
+}
+```
+
+### IDataService
+
+```typescript
+interface IDataService {
+  listResources(): Promise<Resource[]>;
+  getResource(uri: string): Promise<Resource>;
+  queryResource(uri: string, query: Record<string, unknown>): Promise<unknown[]>;
+  createRecord(uri: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
+  updateRecord(uri: string, id: string, data: Record<string, unknown>): Promise<Record<string, unknown>>;
+  deleteRecord(uri: string, id: string): Promise<boolean>;
+}
+```
+
+For more detailed documentation, refer to:
+
+- [Model Context Protocol Specification](https://github.com/modelcontextprotocol/specification)
+- [MCP SDK Documentation](https://github.com/modelcontextprotocol/sdk)
+- [Zod Documentation](https://github.com/colinhacks/zod)
+
+## License
+
+MIT License

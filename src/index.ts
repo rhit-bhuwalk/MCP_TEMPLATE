@@ -1,19 +1,87 @@
-#!/usr/bin/env node
+/**
+ * MCP Server Template
+ * 
+ * A starting point for building custom Model Context Protocol servers
+ */
 
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { AirtableService } from './airtableService.js';
-import { AirtableMCPServer } from './mcpServer.js';
+// Core exports
+export { MCPServer } from './core/MCPServer.js';
 
-const main = async () => {
-  const apiKey = process.argv.slice(2)[0];
-  if (apiKey) {
-    // Deprecation warning
-    console.warn('warning (airtable-mcp-server): Passing in an API key as a command-line argument is deprecated and may be removed in a future version. Instead, set the `AIRTABLE_API_KEY` environment variable. See https://github.com/domdomegg/airtable-mcp-server/blob/master/README.md#usage for an example with Claude Desktop.');
-  }
-  const airtableService = new AirtableService(apiKey);
-  const server = new AirtableMCPServer(airtableService);
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
-};
+// Type exports
+export {
+  IDataService,
+  IMCPServer,
+  Resource,
+  Record,
+  ListRecordsArgs,
+  GetRecordArgs,
+  CreateRecordArgs,
+  UpdateRecordArgs,
+  DeleteRecordArgs,
+  SearchRecordsArgs,
+  // Schema exports
+  RecordSchema,
+  ListRecordsArgsSchema,
+  GetRecordArgsSchema,
+  CreateRecordArgsSchema,
+  UpdateRecordArgsSchema,
+  DeleteRecordArgsSchema,
+  SearchRecordsArgsSchema,
+} from './types/index.js';
 
-await main();
+// Utility exports
+export {
+  formatToolResponse,
+  formatErrorResponse,
+  formatResourceContent,
+  getInputSchema,
+  safeExecute,
+  validateInput,
+  logger,
+} from './utils/index.js';
+
+// Example implementations (for reference)
+export { InMemoryDataService } from './examples/services/InMemoryDataService.js';
+export {
+  UserSchema,
+  USER_RESOURCE,
+  ActivateUserArgsSchema,
+  DeactivateUserArgsSchema,
+  FilterUsersByRoleArgsSchema,
+} from './examples/resources/UserResource.js';
+
+/**
+ * Getting Started:
+ * 
+ * 1. Create your own data service by implementing the IDataService interface
+ * 2. Define your resources and their schemas
+ * 3. Initialize an MCPServer with your data service
+ * 4. Register custom tools as needed
+ * 5. Connect to a transport (HTTP, WebSocket, etc.)
+ * 
+ * Example:
+ * 
+ * ```typescript
+ * import { MCPServer, HttpTransport } from 'mcp-server-template';
+ * import { MyDataService } from './services/MyDataService';
+ * 
+ * const dataService = new MyDataService();
+ * const server = new MCPServer(dataService, {
+ *   name: 'my-custom-mcp',
+ *   version: '1.0.0'
+ * });
+ * 
+ * server.registerTool(
+ *   'my_custom_tool',
+ *   'Description of my tool',
+ *   MyToolSchema,
+ *   async (args) => {
+ *     // Custom implementation
+ *     return { result: 'success' };
+ *   }
+ * );
+ * 
+ * const transport = new HttpTransport({ port: 3000 });
+ * server.connect(transport);
+ * ```
+ */
